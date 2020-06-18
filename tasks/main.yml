@@ -1,0 +1,138 @@
+---
+- name: Get current git commit hash
+  command: git rev-parse HEAD
+  args:
+    chdir: "{{ webroot }}"
+  register: latest_commit
+  changed_when: FALSE
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
+
+- name: Get latest update status
+  command: "drush -y --root={{ webroot }} pm-refresh"
+  changed_when: false
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
+  become: yes
+  become_user: "{{ run_as_user }}"
+
+- name: Check if core needs an update
+  command: "drush --root={{ webroot }} pm-updatestatus --fields=message --field-labels=0 --format=list drupal"
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
+  changed_when: false
+  become: yes
+  become_user: "{{ run_as_user }}"
+  register: core_needs_update
+
+- name: Update core
+  command: "drush -y --root={{ webroot }} up drupal"
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance") and core_needs_update.stdout != ''
+  become: yes
+  become_user: "{{ run_as_user }}"
+
+- name: Get new core version
+  command: "drush -y --root={{ webroot }} status --fields=drupal-version --field-labels=0"
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance") and core_needs_update.stdout != ''
+  register: drupal_version
+  become: yes
+  become_user: "{{ run_as_user }}"
+  changed_when: no
+
+- name: Remove CHANGELOG and MAINTAINERS
+  file:
+    path: "{{ webroot }}/{{ item }}"
+    state: absent
+  loop:
+    - CHANGELOG.txt
+    - MAINTAINERS.txt
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
+
+- name: Restore the .gitignore from the repo
+  command: "git checkout .gitignore"
+  args:
+    chdir: "{{ webroot }}"
+  changed_when: gitignore.stderr != 'Updated 0 paths from the index'
+  become: yes
+  become_user: "{{ run_as_user }}"
+  register: gitignore
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
+
+- name: git add core
+  command: git add -v -A
+  args:
+    chdir: "{{ webroot }}"
+  become: yes
+  become_user: "{{ run_as_user }}"
+  register: add_result
+  changed_when: add_result.stdout != ''
+  failed_when: add_result.stderr != ''
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance") and core_needs_update.stdout != ''
+
+- name: git commit core
+  command: "git commit -m 'Drupal core upgrade: version {{ drupal_version.stdout }}'"
+  args:
+    chdir: "{{ webroot }}"
+  register: commit_result
+  become: yes
+  become_user: "{{ run_as_user }}"
+  changed_when: commit_result.rc == 0
+  failed_when: not(commit_result.rc == 0 or 'nothing to commit, working tree clean' in commit_result.stdout_lines)
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance") and core_needs_update.stdout != ''
+
+- name: Get a list of modules to update
+  command: "drush -y --root={{ webroot }} pm-updatestatus --pipe"
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
+  changed_when: false
+  become: yes
+  become_user: "{{ run_as_user }}"
+  register: available_updates
+
+- name: Update modules
+  include_tasks:
+    file: update-module.yml
+  loop: "{{ available_updates.stdout_lines }}"
+  when: available_updates.stdout_lines is defined
+
+
+- name: Check for database updates
+  command: "drush -y --root={{ webroot }} updatedb-status"
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
+  become: yes
+  become_user: "{{ run_as_user }}"
+  changed_when: FALSE
+  register: updatedb_status
+
+- name: Run database updates
+  command: "drush -y --root={{ webroot }} updatedb"
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance") and updatedb_status.stdout != 'No database updates required'
+  become: yes
+  become_user: "{{ run_as_user }}"
+
+- name: git push
+  command: git push
+  args:
+    chdir: "{{ webroot }}"
+  register: push_result_addl
+  become: yes
+  become_user: "{{ run_as_user }}"
+  when: internal_repo == "1" and (git_repo_push_url is search("ssh://"))
+  changed_when: push_result_addl.rc == 0 and push_result_addl.stderr != 'Everything up-to-date'
+  failed_when: not(push_result_addl.rc == 0)
+
+- name: Show release notes
+  command: "drush -y --root={{ webroot }} pm-releasenotes {{ available_updates.stdout_lines | join(' ') }}"
+  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
+  become: yes
+  become_user: "{{ run_as_user }}"
+
+- name: Get git changelog
+  command: "git log --oneline {{ latest_commit.stdout }}..HEAD"
+  args:
+    chdir: "{{ webroot }}"
+  register: changelog
+  changed_when: FALSE
+  when: latest_commit.stdout is defined
+
+- name: Print git changelog
+  debug:
+    var: changelog.stdout
+  changed_when: FALSE
+  when: latest_commit.stdout is defined

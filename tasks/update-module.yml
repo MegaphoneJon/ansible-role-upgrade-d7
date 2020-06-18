@@ -1,0 +1,31 @@
+---
+- name: Update a single plugin/theme
+  command: "drush -y --root={{ webroot }} up {{ item }}"
+  become: yes
+  become_user: "{{ run_as_user }}"
+
+- name: Get the new module version number
+  command: "drush -y --root={{ webroot }} pm-info --field-labels=0 --fields=version --format=list {{item }}"
+  register: new_version_number
+  become: yes
+  become_user: "{{ run_as_user }}"
+
+- name: git add the plugin/theme
+  command: git add -v -A
+  args:
+    chdir: "{{ webroot }}"
+  register: add_result
+  become: yes
+  become_user: "{{ run_as_user }}"
+  changed_when: add_result.stdout != ''
+  failed_when: add_result.stderr != ''
+
+- name: git commit plugin/theme
+  command: "git commit -m 'Drupal module/theme upgrade: {{ item }} {{ new_version_number.stdout }}'"
+  args:
+    chdir: "{{ webroot }}"
+  register: commit_result
+  become: yes
+  become_user: "{{ run_as_user }}"
+  changed_when: commit_result.rc == 0
+  failed_when: not(commit_result.rc == 0 or 'nothing to commit, working tree clean' in commit_result.stdout_lines)
