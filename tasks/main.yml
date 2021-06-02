@@ -18,14 +18,14 @@
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
 
 - name: Get latest update status
-  command: "drush -y --root={{ webroot }} pm-refresh"
+  command: "drush8 -y --root={{ webroot }} pm-refresh"
   changed_when: false
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
   become: yes
   become_user: "{{ run_as_user }}"
 
 - name: Check if core needs an update
-  command: "drush --root={{ webroot }} pm-updatestatus --fields=message --field-labels=0 --format=list drupal"
+  command: "drush8 --root={{ webroot }} pm-updatestatus --fields=message --field-labels=0 --format=list drupal"
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
   changed_when: false
   become: yes
@@ -33,13 +33,13 @@
   register: core_needs_update
 
 - name: Update core
-  command: "drush -y --root={{ webroot }} up drupal"
+  command: "drush8 -y --root={{ webroot }} up drupal"
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance") and core_needs_update.stdout != ''
   become: yes
   become_user: "{{ run_as_user }}"
 
 - name: Get new core version
-  command: "drush -y --root={{ webroot }} status --fields=drupal-version --field-labels=0"
+  command: "drush8 -y --root={{ webroot }} status --fields=drupal-version --field-labels=0"
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance") and core_needs_update.stdout != ''
   register: drupal_version
   become: yes
@@ -88,7 +88,7 @@
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance") and core_needs_update.stdout != ''
 
 - name: Get a list of modules to update
-  command: "drush -y --root={{ webroot }} pm-updatestatus --pipe"
+  command: "drush8 -y --root={{ webroot }} pm-updatestatus --pipe"
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
   changed_when: false
   become: yes
@@ -103,7 +103,7 @@
 
 
 - name: Check for database updates
-  command: "drush -y --root={{ webroot }} updatedb-status"
+  command: "drush8 -y --root={{ webroot }} updatedb-status"
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
   become: yes
   become_user: "{{ run_as_user }}"
@@ -111,7 +111,7 @@
   register: updatedb_status
 
 - name: Run database updates
-  command: "drush -y --root={{ webroot }} updatedb"
+  command: "drush8 -y --root={{ webroot }} updatedb"
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance") and updatedb_status.stdout != 'No database updates required'
   become: yes
   become_user: "{{ run_as_user }}"
@@ -128,7 +128,7 @@
   failed_when: not(push_result_addl.rc == 0)
 
 - name: Show release notes
-  command: "drush -y --root={{ webroot }} pm-releasenotes {{ available_updates.stdout_lines | join(' ') }}"
+  command: "drush8 -y --root={{ webroot }} pm-releasenotes {{ available_updates.stdout_lines | join(' ') }}"
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
   become: yes
   become_user: "{{ run_as_user }}"

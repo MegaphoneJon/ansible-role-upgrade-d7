@@ -1,11 +1,11 @@
 ---
 - name: Update a single plugin/theme
-  command: "drush -y --root={{ webroot }} up {{ item }}"
+  command: "drush8 -y --root={{ webroot }} up {{ item }}"
   become: yes
   become_user: "{{ run_as_user }}"
 
 - name: Get the new module version number
-  command: "drush -y --root={{ webroot }} pm-info --field-labels=0 --fields=version --format=list {{item }}"
+  command: "drush8 -y --root={{ webroot }} pm-info --field-labels=0 --fields=version --format=list {{item }}"
   register: new_version_number
   become: yes
   become_user: "{{ run_as_user }}"
