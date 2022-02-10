@@ -55,8 +55,8 @@
     - MAINTAINERS.txt
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
 
-- name: Restore the .gitignore from the repo
-  command: "git checkout .gitignore"
+- name: Restore the .gitignore and .htaccess from the repo
+  command: "git checkout .gitignore .htaccess"
   args:
     chdir: "{{ webroot }}"
   changed_when: gitignore.stderr != 'Updated 0 paths from the index'
