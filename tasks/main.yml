@@ -16,6 +16,8 @@
   register: latest_commit
   changed_when: FALSE
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
+  become: yes
+  become_user: "{{ run_as_user }}"
 
 - name: Get latest update status
   command: "drush8 -y --root={{ webroot }} pm-refresh"
@@ -138,6 +140,8 @@
   args:
     chdir: "{{ webroot }}"
   register: changelog
+  become: yes
+  become_user: "{{ run_as_user }}"
   changed_when: FALSE
   when: latest_commit.stdout is defined
 
