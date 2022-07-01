@@ -129,11 +129,11 @@
   changed_when: push_result_addl.rc == 0 and push_result_addl.stderr != 'Everything up-to-date'
   failed_when: not(push_result_addl.rc == 0)
 
-- name: Show release notes
-  command: "drush8 -y --root={{ webroot }} pm-releasenotes {{ available_updates.stdout_lines | join(' ') }}"
-  when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
-  become: yes
-  become_user: "{{ run_as_user }}"
+# - name: Show release notes
+#   command: "drush8 -y --root={{ webroot }} pm-releasenotes {{ available_updates.stdout_lines | join(' ') }}"
+#   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
+#   become: yes
+#   become_user: "{{ run_as_user }}"
 
 - name: Get git changelog
   command: "git log --oneline {{ latest_commit.stdout }}..HEAD"
