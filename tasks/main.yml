@@ -1,9 +1,18 @@
 ---
+- name: Ensure file owner/perms are correct
+  file:
+    path: "{{ webroot }}"
+    state: directory
+    mode: ug+rw
+    owner: "{{ run_as_user }}"
+    group: "{{ run_as_user }}"
+    recurse: yes
+  become: yes
+
 - name: git pull
   git:
     repo: "{{ git_repo_url }}"
     dest: "{{ gitroot }}"
-    version: "{{ git_main_branch }}"
     track_submodules: no
   become: yes
   become_user: "{{ run_as_user }}"
