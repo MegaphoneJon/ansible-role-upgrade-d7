@@ -71,7 +71,7 @@
   args:
     chdir: "{{ webroot }}"
   changed_when: gitignore.stderr != 'Updated 0 paths from the index'
-  failed_when: gitignore.stderr != '' and gitignore.stderr is not search("did not match any file")
+  failed_when: gitignore.stdout != '' and not gitignore.stderr is search("did not match any file")
   become: yes
   become_user: "{{ run_as_user }}"
   register: gitignore
