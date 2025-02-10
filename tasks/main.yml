@@ -100,7 +100,7 @@
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance") and core_needs_update.stdout != ''
 
 - name: Get a list of modules to update
-  command: "drush8 -y --root={{ webroot }} pm-updatestatus --pipe"
+  command: "drush8 -y --root={{ webroot }} pm-updatestatus --pipe --no-core"
   when: cms == 'Drupal' and contract_type is search("Drupal Maintenance")
   changed_when: false
   become: yes
